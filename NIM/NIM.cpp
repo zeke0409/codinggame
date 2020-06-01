@@ -104,10 +104,20 @@ int main() {
     cout<<"先手:1,後手:2"<<endl;
     ll type;
     cin>>type;
-    if(type==2){
+    if(type==1){
         input(vec);
     }
     while(1){
+        bool f2 = true;
+        for (auto i : vec) {
+            if (i != 0) {
+                f2 = false;
+            }
+        }
+        if (f2) {
+            cout << "私の負けです" << endl;
+            return 0;
+        }
         ll XOR_sum=0;
         ll sum=0;
         for(auto i:vec){
@@ -115,13 +125,20 @@ int main() {
             sum+=i;
         }
         if(XOR_sum==0){
-
+            rep(i, vec.size()) {
+                if (vec[i] != 0) {
+                    output(i, 1);
+                    vec[i]--;
+                    break;
+                }
+            }
         }else{
             rep(i,vec.size()){
                 if(MSB8bit(XOR_sum)==MSB8bit(vec[i])){
                     int res=vec[i]^XOR_sum;
                     output(i,vec[i]-res);
                     vec[i]=res;
+                    break;
                 }
             }
             bool f=true;
@@ -131,7 +148,7 @@ int main() {
                 }
             }
             if(f){
-                cout<<"俺の勝ち！なんで負けたか考えておいてください、ほなまた"<<endl;
+                cout<<"俺の勝ち！何で負けたか、明日まで考えといてください。そしたら何かが見えてくるはずです。ほな、いただきます。"<<endl;
                 return 0;
             }
         }
