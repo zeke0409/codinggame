@@ -97,7 +97,13 @@ int graph_search(V now, map<V, ll>& dp,map<V,P>& path) {
         rep3(j, 1, now[i] + 1) {
             V temp = now;
             temp[i] -= j;
-            if (graph_search(temp, dp,path) == -1) {
+            int k;
+            if(dp[temp]!=0){
+                k = dp[temp];
+            }else{
+                k = graph_search(temp, dp, path);
+            }
+            if (k == -1) {
                 win = true;
                 path[now]={i,j};
                 break;
@@ -120,6 +126,14 @@ int main() {
     map<V,P> path;
     dp[zero] = -1;
     graph_search(vec, dp,path);
+    for(auto i=dp.begin();i!=dp.end();i++){
+        if(i->second==-1){
+            for(auto j:i->first){
+                cout<<j<<" ";
+            }
+            cout<<endl;
+        }
+    }
     cout << "先手:1,後手:2" << endl;
     ll type;
     cin >> type;
