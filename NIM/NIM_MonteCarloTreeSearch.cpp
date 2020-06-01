@@ -216,6 +216,7 @@ pair<int,int> MonteCarloTreeSearch(vector<int> vec){
             res=max_reg;
         }
     }
+    prev_state=res;
     for(int i=0;i<vec.size();i++){
         if(vec[i]!=status[res][i]){
             return {i,vec[i]-status[res][i]};
@@ -247,5 +248,31 @@ int main(){
         initial(vec);
         graph[0].push_back(1);
     }
-    
+    while(1){
+        bool f2 = true;
+        for (auto i : vec) {
+            if (i != 0) {
+                f2 = false;
+            }
+        }
+        if (f2) {
+            cout << "私の負けです" << endl;
+            return 0;
+        }
+        pair<int,int> res=MonteCarloTreeSearch(vec);
+        output(res.F,res.S);
+        vec[res.F]-=res.S;
+        bool f = true;
+        for (auto i : vec) {
+            if (i != 0) {
+                f = false;
+            }
+        }
+        if (f) {
+            cout << "俺の勝ち！何で負けたか、明日まで考えといてください。そした"
+                    "ら何かが見えてくるはずです。ほな、いただきます。"
+                 << endl;
+            return 0;
+        }
+    }
 }
