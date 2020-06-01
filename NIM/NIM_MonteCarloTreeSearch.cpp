@@ -60,6 +60,7 @@ ll MOD = 1e9 + 7;
 ll INF = 1e18;
 // cout << "Case #" << index << " :IMPOSSIBLE";
 void input(vector<int>& vec) {
+    cout<<"||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"<<endl;
     cout << "ただいまのゲーム状態" << endl;
     for(int i=0;i<vec.size();i++) {
         cout << i + 1 << "番目"
@@ -98,13 +99,14 @@ vector<bool> playout;//playoutの状態か？
 const int expasion_limit=3;//ノード展開のための閾値
 const int search_num=1000;
 int prev_state=0;
-const long double C_p=0.5;//コスト関数のハイパーパラメーター
-long double UCB1(long double w,long double t){
-    return C_p*(log(2.00*t)/(w+1.00));
+const long double C_p=5.0;//コスト関数のハイパーパラメーター
+long double UCB1(long double t,long double w){
+    return C_p*(log(2.00*(t+1))/(w+1.00));
     // tは総試行回数
     // wは指す予定の行動が過去に何回されたか
 }
 int Selection(int s){
+    //cout<<"今から"<<s<<"を頂点としたSelectionをしますわ"<<endl;
     if(playout[s]){
         return -1;
     }
@@ -118,7 +120,7 @@ int Selection(int s){
             int now=state_list.front();
             state_list.pop();
             if(playout[now]||history[now]<expasion_limit){
-                q.push({evaluate[now]+UCB1(history[s],history[now]),now});
+                q.push({evaluate[now]+C_p*UCB1(history[s],history[now]),now});
             }else{
                 for(auto child:graph[now]){
                     state_list.push(child);
@@ -127,12 +129,22 @@ int Selection(int s){
         }
         return q.top().second;
     }else{
+        /*for(auto i:status[s]){
+            cout<<i<<" ";
+        }
+        cout<<endl;*/
+        //cout<<"子ノードの拡張を行いますわ！"<<endl;
         child_exist[s]=true;
         //子ノードの拡張を行う
         for(int i=0;i<status[s].size();i++){
-            for(int j=1;j<status[s][i];j++){
+            for(int j=1;j<=status[s][i];j++){
                 vector<int> temp = status[s];
                 temp[i]-=j;
+               /* for (auto i : temp) {
+                    cout << i << " ";
+                }
+                cout << endl;
+                cout << "拡張しますわ" << endl;*/
                 bool zero = true;
                 for (auto k : temp) {
                     if (k != 0) {
@@ -144,6 +156,7 @@ int Selection(int s){
                 evaluate.push_back(0.00);
                 history.push_back(0);
                 graph[s].push_back(status.size()-1);
+               // cout << "親は" << s << "で子は" << status.size() - 1 << endl;
                 graph.push_back({});
                 child_exist.push_back(false);
                 parent.push_back(s);
@@ -154,41 +167,54 @@ int Selection(int s){
                 }
             }
         }
+        //cout<<"子ノードの拡張をして"<<graph[s][0]<<"へ潜りましたわ！"<<endl;
         return graph[s][0];
     }
 }
 pair<int,int> MonteCarloTreeSearch(vector<int> vec){
+    cout<<"モンテカルロ探索を開始しますわ"<<endl;
+    for(auto i:status[prev_state]){
+        cout<<i<<" ";
+    }
+    cout<<endl;
+    cout<<"から探索"<<endl;
     int start;
     if(status[prev_state]==vec){
         start=prev_state;
     }
     for(int i=0;i<graph[prev_state].size();i++){
+        for (auto k : vec) {
+            cout << k << " ";
+        }
+        cout << endl;
+        cout << "を見つけましたわ" << endl;
         if(status[graph[prev_state][i]]==vec){
             start=graph[prev_state][i];
         }
     }
+    cout<<"スタートノードは"<<start<<endl;
     for(int search=0;search<search_num;search++){
         int now=start;
         //playoutまで探索するのです！
-        
         while(1){
             int child = Selection(now);
             if(child==-1){
                 break;
             }
+            now=child;
         }
         //葉ノードからさかのぼりますわ！
         int temp=now;
         bool init=true;
         int path=0;
         //経路長の探索
-        //cout<<"経路"<<endl;
+       // cout<<"経路"<<endl;
         while(temp!=start){
-            //cout<<temp<<" ";
+         //   cout<<temp<<" ";
             path++;
             temp=parent[temp];
         }
-        //cout<<endl;
+       // cout<<endl;
         long double score;
         if(path%2==0){
             score=-1;
@@ -212,8 +238,9 @@ pair<int,int> MonteCarloTreeSearch(vector<int> vec){
     int max_reg=0;
     int res;
     for(int i=0;i<graph[start].size();i++){
-        if(chmax(max_reg,history[i])){
-            res=max_reg;
+        cout<<"探索回数"<<graph[start][i]<<" "<<history[graph[start][i]]<<endl;
+        if(chmax(max_reg,history[graph[start][i]])){
+            res=graph[start][i];
         }
     }
     prev_state=res;
@@ -274,5 +301,6 @@ int main(){
                  << endl;
             return 0;
         }
+        input(vec);
     }
 }
