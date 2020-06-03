@@ -102,7 +102,7 @@ const int expasion_limit = 100;  //ノード展開のための閾値
 const int search_num = 10000;
 int prev_state = 0;
 int total_try_num=0;
-const long double C_p = 5;  //コスト関数のハイパーパラメーター
+const long double C_p =1;  //コスト関数のハイパーパラメーター
 long double UCB1(long double w) {
     //cout<<t<<" "<<w<<endl;
     return C_p * (log(2.00 *(long double) (total_try_num + 1)) / (w + 1.00));
@@ -123,11 +123,9 @@ int Selection(int s,int start) {
             int now = state_list.front();
             state_list.pop();
             if (playout[now] || (history[now] < expasion_limit)) {
-               // cout<<now<<" "<<history[now]<<" "<<s<<" "<<history[s]<<" "<<boss<<" "<<history[boss]<<endl;
                 if(playout[now]&&history[now]!=0){
                     q.push({evaluate[now] + UCB1(history[now])-INF, now});
                 }else{
-                  //  cout<<evaluate[now] + UCB1(history[now])<<endl;
                     q.push({evaluate[now] + UCB1(history[now]), now});
                 }
             } else {
@@ -136,7 +134,6 @@ int Selection(int s,int start) {
                 }
             }
         }
-       // cout<<q.top().first<<endl;
         return q.top().second;
     } else {
         child_exist[s] = true;
@@ -170,7 +167,6 @@ int Selection(int s,int start) {
         return graph[s][0];
     }
 }
-int kaburi = 0;
 pair<int, int> MonteCarloTreeSearch(vector<int> vec) {
     cout << "モンテカルロ探索を開始しますわ" << endl;
     int start;
@@ -194,30 +190,23 @@ pair<int, int> MonteCarloTreeSearch(vector<int> vec) {
             }
             now = child;
         }
-       // cout<<"BOSSは"<<boss<<"ですわ！"<<endl;
         //葉ノードからさかのぼりますわ！
         int temp = now;
         bool init = true;
         int path = 0;
         //経路長の探索
-       //  cout<<"経路"<<endl;
         while (temp != start) {
-            //cout<<temp<<" ";
             path++;
             temp = parent[temp];
         }
-        //cout<<endl;
         long double score;
-        
         if(history[now]!=0){
             score=0;
-            kaburi++;
         }else if (path % 2 == 0) {
             score = -1;
         } else {
             score = 1;
         }
-        //cout<<"評価値"<<score<<endl;
         //経路ノードの更新
         while (now != start) {
             if (init) {
@@ -239,8 +228,7 @@ pair<int, int> MonteCarloTreeSearch(vector<int> vec) {
     int max_reg = 0;
     int res;
     for (int i = 0; i < graph[start].size(); i++) {
-        cout << "探索回数" << graph[start][i] << " " << history[graph[start][i]]<<" "<<evaluate[graph[start][i]]<<" "
-             << endl;
+        cout << "状態" << graph[start][i] << "の探索回数" << history[graph[start][i]]<<"状態評価値"<<evaluate[graph[start][i]]<< endl;
         if (chmax(max_reg, history[graph[start][i]])) {
             res = graph[start][i];
         }
@@ -288,9 +276,7 @@ int main() {
             cout << "私の負けです" << endl;
             return 0;
         }
-        kaburi=0;
         pair<int, int> res = MonteCarloTreeSearch(vec);
-        cout<<"かぶり"<<kaburi<<endl;
         output(res.F, res.S);
         vec[res.F] -= res.S;
         int XOR_sum=0;
