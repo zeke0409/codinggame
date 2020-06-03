@@ -74,6 +74,12 @@ bool can_move(int y, int x, vector<vector<bool>>& have) {
     }
     return !have[y][x];
 }
+bool can_move_pure(int y, int x, vector<vector<bool>>& have) {
+    if (y >= 20 || y < 0 || x >= 30 || x < 0) {
+        return false;
+    }
+    return true;
+}
 vector<vector<int>> BFS_distance(int y, int x) {
     vector<vector<int>> temp(20, vector<int>(30, INF));
     temp[y][x] = 0;
@@ -114,6 +120,7 @@ int BFS_num(int y, int x, vector<vector<bool>> have) {
 }
 int solve() {
     //各プレイヤーごとのボロノイ図の構築
+    cerr<<"プレイヤーごとのボロノイ図構築"<<endl;
     vector<vector<int>> Voronoi(20, vector<int>(30, -1));
     vector<vector<int>> Voronoi_reg(20, vector<int>(30, INF - 1));
     for (int i = 0; i < N; i++) {
@@ -136,8 +143,7 @@ int solve() {
         if (!can_move(Y1[P] + dy[way], X1[P] + dx[way], have_path)) {
             continue;
         }
-        vector<vector<int>> BFS_dis =
-            BFS_distance(Y1[P] + dy[way], X1[P] + dx[way]);
+        vector<vector<int>> BFS_dis =BFS_distance(Y1[P] + dy[way], X1[P] + dx[way]);
         for (int h = 0; h < 20; h++) {
             for (int w = 0; w < 30; w++) {
                 if (Voronoi[h][w] != P) {
@@ -149,6 +155,62 @@ int solve() {
             }
         }
     }
+    //いける全点に対して評価をする
+    vector<vector<int>> BFS_dis = BFS_distance(Y1[P], X1[P]);
+    vector<long double> BFS_nums;
+    vector<long double> way_score(3);
+    for(int i=0;i<N;i++){
+        BFS_nums.push_back(BFS_num(Y1[i],X1[i],have_path));
+    }
+    for(int h=0;h<20;h++){
+        for(int w=0;w<30;w++){
+            if(Voronoi_way[h][w]==-1){
+                continue;
+            }
+            vector<int> order={0,1,2,3};
+            long double best_score=0;
+            do{ 
+                vector<vector<bool>> temp_have=have_path;
+                long double score=0;
+                int nowy=h;
+                int nowx=w;
+                int dist=BFS_dis[nowy][nowx];
+                long double dist2=dist;
+                while(!(nowy==Y1[P]&&nowx==X1[P])){
+                    temp_have[nowy][nowx]=true;
+                    for(int j=0;j<4;j++){
+                        int way=order[j];
+                        if(can_move_pure(nowy+dy[way],nowx+dx[way],have_path)&&BFS_dis[nowy+dy[way]][nowx+dx[way]]==dist-1){
+                            nowy=nowy+dy[way];
+                            nowx=nowx+dx[way];
+                            dist--;
+                            break;
+                        }
+                    }
+                }
+                for(int player=0;player<N;player++){
+                    long double num=BFS_num(Y1[player],X1[player],temp_have);
+                    num-=dist2;
+                    long double rate = BFS_nums[player] / num;
+                    if(player==P){
+                        score-=rate;
+                    }else{
+                        score+=rate;
+                    }
+                }
+                chmax(best_score,score);
+            }while(next_permutation(all(order)));
+            way_score[Voronoi_way[h][w]]+=best_score;
+        }
+    }
+    long double way_reg=0;
+    int res=0;
+    for(int i=0;i<4;i++){
+        if(chmax(way_reg,way_score[i])){
+            res=i;
+        }
+    }
+    return res;
 }
 //接敵していない場合、最大利得を目指す
 int max_solve() {
@@ -234,7 +296,7 @@ bool in_enemy() {
         q.pop();
         for (int way = 0; way < 4; way++) {
             for (int player = 0; player < N; player++) {
-                if (P = player) {
+                if (P == player||death[player]) {
                     continue;
                 }
                 if (nowy + dy[way] == Y1[player] &&nowx + dx[way] == X1[player]) {
@@ -265,16 +327,12 @@ int main() {
             player_have_path[i].push_back({Y1[i], X1[i]});
         }
         int res = 0;
-        /*if(in_enemy()){
+        if(!in_enemy()){
             res=max_solve();
         }else{
             res=solve();
-        }*/
-        if(in_enemy()){
-            cerr<<"接敵中"<<endl;
         }
         cerr << "前段階終了" << endl;
-        res = max_solve();
         cout << output[res] << endl;
     }
 }
