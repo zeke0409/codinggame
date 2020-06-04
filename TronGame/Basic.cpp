@@ -1,6 +1,10 @@
+#include <stdio.h>
+#include <time.h>
+
 #include <algorithm>
 #include <bitset>
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <deque>
 #include <functional>
@@ -74,7 +78,7 @@ bool can_move(int y, int x, vector<vector<bool>>& have) {
     }
     return !have[y][x];
 }
-bool can_move_pure(int y, int x, vector<vector<bool>>& have) {
+bool can_move_pure(int y, int x) {
     if (y >= 20 || y < 0 || x >= 30 || x < 0) {
         return false;
     }
@@ -98,24 +102,37 @@ vector<vector<int>> BFS_distance(int y, int x) {
             }
         }
     }
+    return temp;
 }
-int BFS_num(int y, int x, vector<vector<bool>> have) {
+int BFS_num(int y, int x, vector<vector<bool>>& have2, bool k=false) {
+    vector<vector<bool>> have(20,vector<bool>(30,true));
     queue<pair<int, int>> q;
     q.push({y, x});
-    have[y][x] = true;
+    have[y][x] = false;
     int cnt = 0;
     while (!q.empty()) {
         int nowy = q.front().F;
         int nowx = q.front().S;
         q.pop();
         for (int i = 0; i < 4; i++) {
-            if (can_move(nowy + dy[i], nowx + dx[i], have)) {
+            int nowy2=nowy+dy[i];
+            int nowx2=nowx+dx[i];
+            if(k){
+                cerr << nowy2 << " " << nowx2 <<" "<<can_move(nowy2, nowx2, have2)<< endl;
+            }
+            
+            //cerr<<"check"<<can_move(nowy2, nowx2, have2)<<" "<<have[nowy2][nowx2]<<endl;
+            if (can_move(nowy2, nowx2, have2)&&have[nowy2][nowx2]) {
+                if(k){
+                cerr << nowy2 << " " << nowx2 <<" "<<can_move(nowy2, nowx2, have2)<<" "<<have[nowy2][nowx2]<< endl;
+            }
                 cnt++;
-                have[nowy + dy[i]][nowx + dx[i]] = true;
-                q.push({nowy + dy[i], nowx + dx[i]});
+                have[nowy2][nowx2] = false;
+                q.push({nowy2,nowx2});
             }
         }
     }
+
     return cnt;
 }
 int solve() {
@@ -137,6 +154,7 @@ int solve() {
         }
     }
     //進む方向ごとのボロノイ図を構築
+    cerr<<"進む方向ごとのボロノイ図を構築"<<endl;
     vector<vector<int>> Voronoi_way(20, vector<int>(30, -1));
     vector<vector<int>> Voronoi_way_reg(20, vector<int>(30, INF - 1));
     for (int way = 0; way < 4; way++) {
@@ -156,6 +174,9 @@ int solve() {
         }
     }
     //いける全点に対して評価をする
+    cerr << "いける全点に対して評価をする" << endl;
+    chrono::system_clock::time_point start, end;
+    start = chrono::system_clock::now();
     vector<vector<int>> BFS_dis = BFS_distance(Y1[P], X1[P]);
     vector<long double> BFS_nums;
     vector<long double> way_score(3);
@@ -164,34 +185,52 @@ int solve() {
     }
     for(int h=0;h<20;h++){
         for(int w=0;w<30;w++){
+            cerr<<endl;
+            cerr<<h<<" "<<w<<endl;
+            end = chrono::system_clock::now();
+
+            double time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+            //cerr<<"time"<< time<<"ms"<<endl;
             if(Voronoi_way[h][w]==-1){
                 continue;
             }
             vector<int> order={0,1,2,3};
             long double best_score=0;
-            do{ 
+           // do{ 
                 vector<vector<bool>> temp_have=have_path;
                 long double score=0;
                 int nowy=h;
                 int nowx=w;
                 int dist=BFS_dis[nowy][nowx];
                 long double dist2=dist;
-                while(!(nowy==Y1[P]&&nowx==X1[P])){
+                while(dist!=0){
                     temp_have[nowy][nowx]=true;
                     for(int j=0;j<4;j++){
                         int way=order[j];
-                        if(can_move_pure(nowy+dy[way],nowx+dx[way],have_path)&&BFS_dis[nowy+dy[way]][nowx+dx[way]]==dist-1){
-                            nowy=nowy+dy[way];
-                            nowx=nowx+dx[way];
-                            dist--;
-                            break;
+                        if(can_move_pure(nowy+dy[way],nowx+dx[way])){
+                            if(BFS_dis[nowy+dy[way]][nowx+dx[way]]==dist-1){
+                                nowy = nowy + dy[way];
+                                nowx = nowx + dx[way];
+                                dist--;
+                                break;
+                            }
                         }
                     }
                 }
+                //cerr<<"経路探索終わり"<<endl;
                 for(int player=0;player<N;player++){
-                    long double num=BFS_num(Y1[player],X1[player],temp_have);
+                    //cerr<<"BFS1前"<<endl;
+                    bool k=false;
+                    if(h==Y1[P]&&w==X1[P]+2){
+                        k=true;
+                    }
+                    long double num=BFS_num(Y1[player],X1[player],temp_have,k);
+                    //cerr<<player<<" "<<num<<endl;
                     num-=dist2;
-                    long double rate = BFS_nums[player] / num;
+                    if(num==0){
+                        continue;
+                    }
+                    long double rate =(BFS_nums[player] / num)-1.000;
                     if(player==P){
                         score-=rate;
                     }else{
@@ -199,7 +238,7 @@ int solve() {
                     }
                 }
                 chmax(best_score,score);
-            }while(next_permutation(all(order)));
+            //}while(next_permutation(all(order)));
             way_score[Voronoi_way[h][w]]+=best_score;
         }
     }
@@ -220,7 +259,7 @@ int max_solve() {
         int nowy = Y1[P] + dy[i];
         int nowx = X1[P] + dx[i];
         if (can_move(nowy, nowx, have_path)) {
-            int possible = BFS_num(nowy, nowx, have_path);
+            int possible = BFS_num(nowy, nowx, have_path,false);
             if (reg == possible) {
                 res.push_back(i);
             } else if (reg < possible) {
