@@ -65,13 +65,13 @@ ll INF = 1e9;
 vector<vector<bool>> have_path(20, vector<bool>(30, false));  //通った場所の履歴
 vector<vector<pair<int, int>>> player_have_path(
     3);  //各プレイヤーが通った場所の履歴
-vector<bool> death(3);
+vector<bool> death(4);
 string output[] = {"UP", "DOWN", "LEFT", "RIGHT"};
 int dx[] = {0, 0, -1, 1};
 int dy[] = {-1, 1, 0, 0};
 int N;
 int P;
-vector<int> X0(3), Y0(3), X1(3), Y1(3);
+vector<int> X0(4), Y0(4), X1(4), Y1(4);
 bool can_move(int y, int x, vector<vector<bool>>& have) {
     if (y >= 20 || y < 0 || x >= 30 || x < 0) {
         return false;
@@ -104,40 +104,107 @@ vector<vector<int>> BFS_distance(int y, int x) {
     }
     return temp;
 }
-int BFS_num(int y, int x, vector<vector<bool>>& have2, bool k=false) {
-    vector<vector<bool>> have(20,vector<bool>(30,true));
-    queue<pair<int, int>> q;
-    q.push({y, x});
-    have[y][x] = false;
+int BFS_num(int y, int x, vector<vector<bool>> have2, bool k = false) {
+    queue<int> q;
+    q.push(y * 30 + x);
+    have2[y][x] = true;
     int cnt = 0;
     while (!q.empty()) {
-        int nowy = q.front().F;
-        int nowx = q.front().S;
+        cnt++;
+        int nowy = q.front() / 30;
+        int nowx = q.front() % 30;
+        //cerr<<"zeke" << nowy << " " << nowx << endl;
+        have2[nowy][nowx] = true;
         q.pop();
         for (int i = 0; i < 4; i++) {
-            int nowy2=nowy+dy[i];
-            int nowx2=nowx+dx[i];
-            if(k){
-                cerr << nowy2 << " " << nowx2 <<" "<<can_move(nowy2, nowx2, have2)<< endl;
-            }
-            
-            //cerr<<"check"<<can_move(nowy2, nowx2, have2)<<" "<<have[nowy2][nowx2]<<endl;
-            if (can_move(nowy2, nowx2, have2)&&have[nowy2][nowx2]) {
-                if(k){
-                cerr << nowy2 << " " << nowx2 <<" "<<can_move(nowy2, nowx2, have2)<<" "<<have[nowy2][nowx2]<< endl;
-            }
-                cnt++;
-                have[nowy2][nowx2] = false;
-                q.push({nowy2,nowx2});
+            int nowy2 = nowy + dy[i];
+            int nowx2 = nowx + dx[i];
+            if (nowy2 >= 0 && nowy2 < 20 && nowx2 >= 0 && nowx2 < 30) {
+                if(have2[nowy2][nowx2]){
+                    continue;
+                }
+                have2[nowy2][nowx2] = true;
+                q.push(nowy2 * 30 + nowx2);
             }
         }
     }
-
     return cnt;
+}
+vector<vector<bool>> alphabeta_have(20,vector<bool>(30));
+vector<pair<int,int>> alphabeta_pos(3);
+int alphabeta(int MIN,int MAX,int depth){
+    int res;
+    int nowy=alphabeta_pos[depth%3].F;
+    int nowx=alphabeta_pos[depth%3].S;
+    alphabeta_have[nowy][nowx]=true;
+    if(depth==9){
+        res=0;
+        for(int player=0;player<N;player--){
+            int k=BFS_num(Y1[player],X1[player],alphabeta_have);
+            if(player==P){
+                res+=k;
+            }else{
+                res-=k;
+            }
+        }
+        alphabeta_have[nowy][nowx] = false;
+        return res;
+    }
+    if(depth%3==0){
+        int reg=0;
+        for(int j=0;j<4;j++){
+            if(can_move(nowy+dy[j],nowx+dx[j],alphabeta_have)){
+                
+                int k=alphabeta(MIN,MAX,depth+1);
+                if(k==-1){
+                    continue;
+                }
+                if(!(MIN<k&&MAX>k)){
+                    alphabeta_have[nowy][nowx] = false;
+                    return -1;
+                }
+                reg=j;
+                MIN=k;
+            }
+        }
+        if(depth==0){
+            alphabeta_have[nowy][nowx]=false;
+            return reg;
+        }
+        res=MIN;
+    }else if(depth%3==1){
+        res=INF;
+        for (int j = 0; j < 4; j++) {
+            if (can_move(nowy + dy[j], nowx + dx[j], alphabeta_have)) {
+                int k = alphabeta(MIN, MAX, depth + 1);
+                if (k == -1) {
+                    continue;
+                }
+                chmin(res,k);
+            }
+        }
+    }else{
+        for (int j = 0; j < 4; j++) {
+            if (can_move(nowy + dy[j], nowx + dx[j], alphabeta_have)) {
+                int k = alphabeta(MIN, MAX, depth + 1);
+                if (k == -1) {
+                    continue;
+                }
+                if (!(MIN < k && MAX > k)) {
+                    alphabeta_have[nowy][nowx] = false;
+                    return -1;
+                }
+                MAX = k;
+            }
+        }
+        res = MAX;
+    }
+    alphabeta_have[nowy][nowx]=false;
+    return res;
 }
 int solve() {
     //各プレイヤーごとのボロノイ図の構築
-    cerr<<"プレイヤーごとのボロノイ図構築"<<endl;
+   // cerr << "プレイヤーごとのボロノイ図構築" << endl;
     vector<vector<int>> Voronoi(20, vector<int>(30, -1));
     vector<vector<int>> Voronoi_reg(20, vector<int>(30, INF - 1));
     for (int i = 0; i < N; i++) {
@@ -154,14 +221,15 @@ int solve() {
         }
     }
     //進む方向ごとのボロノイ図を構築
-    cerr<<"進む方向ごとのボロノイ図を構築"<<endl;
+    cerr << "進む方向ごとのボロノイ図を構築" << endl;
     vector<vector<int>> Voronoi_way(20, vector<int>(30, -1));
     vector<vector<int>> Voronoi_way_reg(20, vector<int>(30, INF - 1));
     for (int way = 0; way < 4; way++) {
         if (!can_move(Y1[P] + dy[way], X1[P] + dx[way], have_path)) {
             continue;
         }
-        vector<vector<int>> BFS_dis =BFS_distance(Y1[P] + dy[way], X1[P] + dx[way]);
+        vector<vector<int>> BFS_dis =
+            BFS_distance(Y1[P] + dy[way], X1[P] + dx[way]);
         for (int h = 0; h < 20; h++) {
             for (int w = 0; w < 30; w++) {
                 if (Voronoi[h][w] != P) {
@@ -173,83 +241,7 @@ int solve() {
             }
         }
     }
-    //いける全点に対して評価をする
-    cerr << "いける全点に対して評価をする" << endl;
-    chrono::system_clock::time_point start, end;
-    start = chrono::system_clock::now();
-    vector<vector<int>> BFS_dis = BFS_distance(Y1[P], X1[P]);
-    vector<long double> BFS_nums;
-    vector<long double> way_score(3);
-    for(int i=0;i<N;i++){
-        BFS_nums.push_back(BFS_num(Y1[i],X1[i],have_path));
-    }
-    for(int h=0;h<20;h++){
-        for(int w=0;w<30;w++){
-            cerr<<endl;
-            cerr<<h<<" "<<w<<endl;
-            end = chrono::system_clock::now();
-
-            double time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
-            //cerr<<"time"<< time<<"ms"<<endl;
-            if(Voronoi_way[h][w]==-1){
-                continue;
-            }
-            vector<int> order={0,1,2,3};
-            long double best_score=0;
-           // do{ 
-                vector<vector<bool>> temp_have=have_path;
-                long double score=0;
-                int nowy=h;
-                int nowx=w;
-                int dist=BFS_dis[nowy][nowx];
-                long double dist2=dist;
-                while(dist!=0){
-                    temp_have[nowy][nowx]=true;
-                    for(int j=0;j<4;j++){
-                        int way=order[j];
-                        if(can_move_pure(nowy+dy[way],nowx+dx[way])){
-                            if(BFS_dis[nowy+dy[way]][nowx+dx[way]]==dist-1){
-                                nowy = nowy + dy[way];
-                                nowx = nowx + dx[way];
-                                dist--;
-                                break;
-                            }
-                        }
-                    }
-                }
-                //cerr<<"経路探索終わり"<<endl;
-                for(int player=0;player<N;player++){
-                    //cerr<<"BFS1前"<<endl;
-                    bool k=false;
-                    if(h==Y1[P]&&w==X1[P]+2){
-                        k=true;
-                    }
-                    long double num=BFS_num(Y1[player],X1[player],temp_have,k);
-                    //cerr<<player<<" "<<num<<endl;
-                    num-=dist2;
-                    if(num==0){
-                        continue;
-                    }
-                    long double rate =(BFS_nums[player] / num)-1.000;
-                    if(player==P){
-                        score-=rate;
-                    }else{
-                        score+=rate;
-                    }
-                }
-                chmax(best_score,score);
-            //}while(next_permutation(all(order)));
-            way_score[Voronoi_way[h][w]]+=best_score;
-        }
-    }
-    long double way_reg=0;
-    int res=0;
-    for(int i=0;i<4;i++){
-        if(chmax(way_reg,way_score[i])){
-            res=i;
-        }
-    }
-    return res;
+    
 }
 //接敵していない場合、最大利得を目指す
 int max_solve() {
@@ -259,7 +251,7 @@ int max_solve() {
         int nowy = Y1[P] + dy[i];
         int nowx = X1[P] + dx[i];
         if (can_move(nowy, nowx, have_path)) {
-            int possible = BFS_num(nowy, nowx, have_path,false);
+            int possible = BFS_num(nowy, nowx, have_path, false);
             if (reg == possible) {
                 res.push_back(i);
             } else if (reg < possible) {
@@ -285,12 +277,13 @@ int max_solve() {
                 chmax(tempreg, BFS_num(nowy + dy[j], nowx + dx[j], have_path));
             }
         }
-        cerr<<output[i]<<" "<<i<<" "<<tempreg<<" "<<secondreg<<endl;
+        cerr << output[i] << " " << i << " " << tempreg << " " << secondreg
+             << endl;
         if (secondreg == tempreg) {
             res2.push_back(i);
         } else if (secondreg < tempreg) {
             res2 = {i};
-            secondreg=tempreg;
+            secondreg = tempreg;
         }
         have_path[nowy][nowx] = false;
     }
@@ -326,7 +319,7 @@ void death_process(int player) {
     }
 }
 bool in_enemy() {
-    vector<vector<bool>> temp=have_path;
+    vector<vector<bool>> temp = have_path;
     queue<vector<int>> q;
     q.push({Y1[P], X1[P]});
     while (!q.empty()) {
@@ -335,10 +328,11 @@ bool in_enemy() {
         q.pop();
         for (int way = 0; way < 4; way++) {
             for (int player = 0; player < N; player++) {
-                if (P == player||death[player]) {
+                if (P == player || death[player]) {
                     continue;
                 }
-                if (nowy + dy[way] == Y1[player] &&nowx + dx[way] == X1[player]) {
+                if (nowy + dy[way] == Y1[player] &&
+                    nowx + dx[way] == X1[player]) {
                     return true;
                 }
             }
@@ -366,10 +360,10 @@ int main() {
             player_have_path[i].push_back({Y1[i], X1[i]});
         }
         int res = 0;
-        if(!in_enemy()){
-            res=max_solve();
-        }else{
-            res=solve();
+        if (!in_enemy()) {
+            res = max_solve();
+        } else {
+            res = solve();
         }
         cerr << "前段階終了" << endl;
         cout << output[res] << endl;
