@@ -445,7 +445,7 @@ void input() {  // input process
         }
     }
 }
-int Boronoi(){
+int Voronoi_process() {
     vector<vector<int>> FINAL_distance = BFS_distance(Y1[P], X1[P]);
     int near = 0;
     int near_reg = INF;
@@ -541,7 +541,7 @@ int main() {
             for (auto i : final_res) {
                 cerr << "候補" << output[i] << endl;
             }
-            res=Boronoi();
+            res=Voronoi_process();
             cout<<output[res]<<endl;
         }
     }
